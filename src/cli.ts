@@ -10,6 +10,8 @@ import { logger } from './utils/logger.js';
 import { DiffParser } from './git/diff-parser.js';
 import { ClaudeReviewer } from './models/claude.js';
 import { TerminalReporter } from './reporters/terminal.js';
+import { StaticAnalyzer } from './analyzers/static.js';
+import { GitHooksManager } from './git/hooks.js';
 import fs from 'fs/promises';
 import path from 'path';
 import ora from 'ora';
@@ -38,42 +40,48 @@ program
       
       // Load configuration
       const config = await loadConfig();
-      
-      // Validate configuration
-      const validation = validateConfig(config);
-      if (!validation.valid) {
-        logger.error('Configuration validation failed:');
-        validation.errors.forEach(err => logger.error(`  - ${err}`));
-        process.exit(1);
-      }
 
       if (!config.enabled) {
         logger.warn('AI review is disabled in configuration');
         process.exit(0);
       }
+      
+      // Check if API key is available
+      const apiKey = getAPIKey(config);
+      
+      // Validate configuration (skip API key check if running static-only)
+      if (apiKey) {
+        const validation = validateConfig(config);
+        if (!validation.valid) {
+          logger.error('Configuration validation failed:');
+          validation.errors.forEach(err => logger.error(`  - ${err}`));
+          process.exit(1);
+        }
+      } else {
+        logger.info('No API key found - running in static analysis mode');
+      }
 
       // Initialize components
       const diffParser = new DiffParser();
       const reporter = new TerminalReporter();
-      
-      // Get API key
-      const apiKey = getAPIKey(config);
-      if (!apiKey) {
-        logger.error('Missing API key. Set ANTHROPIC_API_KEY environment variable.');
-        process.exit(1);
-      }
+      const reviewer = apiKey ? new ClaudeReviewer(apiKey, config.ai) : null;
 
-      const reviewer = new ClaudeReviewer(apiKey, config.ai);
-
-      // Test API connection
-      const spinner = ora('Testing AI connection...').start();
-      const connected = await reviewer.testConnection();
-      
-      if (!connected) {
-        spinner.fail('Failed to connect to AI service');
-        process.exit(1);
+      // Test API connection if available
+      const spinner = ora();
+      if (reviewer) {
+        spinner.text = 'Testing AI connection...';
+        spinner.start();
+        const connected = await reviewer.testConnection();
+        
+        if (!connected) {
+          spinner.fail('Failed to connect to AI service');
+          logger.warn('Falling back to static analysis only');
+        } else {
+          spinner.succeed('Connected to AI service');
+        }
+      } else {
+        logger.info('No API key configured - using static analysis only');
       }
-      spinner.succeed('Connected to AI service');
 
       // Get diff based on options
       let context;
@@ -113,13 +121,38 @@ program
         process.exit(0);
       }
 
-      // Run AI review
-      spinner.text = 'Running AI code review...';
+      // Run static analysis first
+      const staticAnalyzer = new StaticAnalyzer();
+      spinner.text = 'Running static analysis...';
       spinner.start();
       
-      const result = await reviewer.reviewChanges(context);
-      
-      spinner.succeed('Review completed');
+      const staticResult = staticAnalyzer.analyze(context.files);
+      spinner.succeed(`Static analysis: ${staticResult.issuesFound} issues found`);
+
+      // Run AI review if API key is available
+      let result;
+      if (reviewer && apiKey) {
+        spinner.text = 'Running AI code review...';
+        spinner.start();
+        
+        result = await reviewer.reviewChanges(context);
+        
+        // Merge static analysis issues
+        result.issues = [...staticResult.issues, ...result.issues];
+        
+        spinner.succeed('Review completed');
+      } else {
+        // Static only mode
+        logger.warn('No API key - running in static analysis mode only');
+        result = {
+          overallScore: staticResult.issuesFound === 0 ? 8 : Math.max(5, 8 - staticResult.issuesFound),
+          issues: staticResult.issues,
+          suggestions: [],
+          positivePoints: [],
+          summary: `Static analysis found ${staticResult.issuesFound} issues in ${staticResult.filesAnalyzed} files.`,
+          reviewTime: 0,
+        };
+      }
 
       // Print results
       reporter.printReview(context, result);
@@ -187,13 +220,18 @@ program
     try {
       const config = await loadConfig();
       const validation = validateConfig(config);
+      const hooksManager = new GitHooksManager();
+      const hookStatus = await hooksManager.getStatus();
 
       console.log(chalk.bold('\n📋 AI Code Review Status\n'));
       console.log(`Enabled: ${config.enabled ? chalk.green('✓') : chalk.red('✗')}`);
       console.log(`AI Provider: ${config.ai.provider}`);
       console.log(`Model: ${config.ai.model}`);
-      console.log(`Pre-commit: ${config.hooks.preCommit}`);
-      console.log(`Pre-push: ${config.hooks.prePush}`);
+      
+      console.log(chalk.bold('\n🪝 Git Hooks'));
+      console.log(`Git repo: ${hookStatus.isGitRepo ? chalk.green('✓') : chalk.red('✗')}`);
+      console.log(`Pre-commit: ${getHookStatusIcon(hookStatus.preCommit)}`);
+      console.log(`Pre-push: ${getHookStatusIcon(hookStatus.prePush)}`);
       
       console.log(chalk.bold('\n🎯 Thresholds'));
       console.log(`Block push: < ${config.thresholds.blockPush}`);
@@ -216,6 +254,62 @@ program
       process.exit(1);
     }
   });
+
+/**
+ * Hooks command - manage git hooks
+ */
+program
+  .command('hooks')
+  .description('Manage Git hooks')
+  .argument('<action>', 'install, uninstall, or status')
+  .option('--force', 'Overwrite existing hooks')
+  .option('--backup', 'Backup existing hooks')
+  .action(async (action: string, options) => {
+    try {
+      const hooksManager = new GitHooksManager();
+
+      switch (action) {
+        case 'install':
+          await hooksManager.installAll(options);
+          logger.success('All hooks installed successfully');
+          break;
+
+        case 'uninstall':
+          await hooksManager.uninstallAll();
+          logger.success('All hooks removed');
+          break;
+
+        case 'status':
+          const status = await hooksManager.getStatus();
+          console.log(chalk.bold('\n🪝 Git Hooks Status\n'));
+          console.log(`Git repository: ${status.isGitRepo ? chalk.green('✓') : chalk.red('✗')}`);
+          console.log(`Pre-commit: ${getHookStatusIcon(status.preCommit)}`);
+          console.log(`Pre-push: ${getHookStatusIcon(status.prePush)}`);
+          break;
+
+        default:
+          logger.error(`Unknown action: ${action}. Use install, uninstall, or status`);
+          process.exit(1);
+      }
+    } catch (error) {
+      logger.error(`Hooks management failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      process.exit(1);
+    }
+  });
+
+/**
+ * Helper to get hook status icon
+ */
+function getHookStatusIcon(status: 'installed' | 'not-installed' | 'foreign'): string {
+  switch (status) {
+    case 'installed':
+      return chalk.green('✓ installed');
+    case 'not-installed':
+      return chalk.dim('✗ not installed');
+    case 'foreign':
+      return chalk.yellow('⚠ installed by another tool');
+  }
+}
 
 /**
  * Save markdown report
