@@ -57,7 +57,7 @@ const DEFAULT_CONFIG: ReviewConfig = {
   },
   ai: {
     provider: 'gemini',
-    model: 'gemini-2.0-flash-exp',
+    model: 'gemini-2.5-flash-lite',
     maxTokens: 4000,
     temperature: 0.2,
   },

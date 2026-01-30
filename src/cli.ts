@@ -4,6 +4,7 @@
  * AI Code Review Bot - CLI Entry Point
  */
 
+import 'dotenv/config';
 import { Command } from 'commander';
 import { loadConfig, getAPIKey, validateConfig, getExampleConfig } from './utils/config.js';
 import { logger } from './utils/logger.js';

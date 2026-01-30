@@ -103,7 +103,7 @@ ai-review status
   },
   "ai": {
     "provider": "gemini",
-    "model": "gemini-2.0-flash-exp",
+    "model": "gemini-2.5-flash-lite",
     "maxTokens": 4000,
     "temperature": 0.2
   },
@@ -138,7 +138,7 @@ ai-review status
 #### `ai`
 - **provider**: AI service (`"gemini"` | `"claude"` | `"openai"` | `"ollama"`)
 - **model**: Model name
-  - Gemini: `"gemini-2.0-flash-exp"`, `"gemini-1.5-pro"`
+  - Gemini: `"gemini-2.5-flash-lite"` (free tier), `"gemini-2.5-flash"`, `"gemini-2.5-pro"`
   - Claude: `"claude-sonnet-4-5"`, `"claude-opus-4"`
   - OpenAI: `"gpt-4"`, `"gpt-4-turbo"`
 - **maxTokens**: Maximum tokens for AI response
