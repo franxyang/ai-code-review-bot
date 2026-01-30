@@ -13,9 +13,13 @@ export default {
       },
     ],
   },
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
   testMatch: ['**/tests/**/*.test.ts'],
   collectCoverageFrom: [
     'src/**/*.ts',
-    '!src/**/*.d.ts',
+    '!src/**/*.d.ts'
+  ],
+  transformIgnorePatterns: [
+    'node_modules/(?!(chalk))',
   ],
 };

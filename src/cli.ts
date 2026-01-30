@@ -12,6 +12,7 @@ import { DiffParser } from './git/diff-parser.js';
 import { ClaudeReviewer } from './models/claude.js';
 import { GeminiReviewer } from './models/gemini.js';
 import { OpenAIReviewer } from './models/openai.js';
+import { OllamaReviewer } from './models/ollama.js';
 import { TerminalReporter } from './reporters/terminal.js';
 import { StaticAnalyzer } from './analyzers/static.js';
 import { GitHooksManager } from './git/hooks.js';
@@ -70,16 +71,19 @@ program
       
       // Choose the appropriate reviewer based on provider
       let reviewer = null;
-      if (apiKey) {
+      if (apiKey || config.ai.provider === 'ollama') {
         switch (config.ai.provider) {
           case 'claude':
-            reviewer = new ClaudeReviewer(apiKey, config.ai);
+            reviewer = new ClaudeReviewer(apiKey!, config.ai);
             break;
           case 'gemini':
-            reviewer = new GeminiReviewer(apiKey, config.ai);
+            reviewer = new GeminiReviewer(apiKey!, config.ai);
             break;
           case 'openai':
-            reviewer = new OpenAIReviewer(apiKey, config.ai);
+            reviewer = new OpenAIReviewer(apiKey!, config.ai);
+            break;
+          case 'ollama':
+            reviewer = new OllamaReviewer(config.ai, process.env.OLLAMA_API_URL);
             break;
           default:
             logger.warn(`Provider ${config.ai.provider} not yet supported, using static analysis only`);

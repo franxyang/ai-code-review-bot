@@ -4,13 +4,14 @@ An intelligent code review tool powered by Claude AI, designed to catch bugs, se
 
 ## ✨ Features
 
-- 🔍 **Deep Code Analysis**: AI-powered review using Claude or Gemini
+- 🔍 **Deep Code Analysis**: AI-powered review using Claude, Gemini, OpenAI, or Ollama
 - 🔐 **Security Scanning**: Detect hardcoded secrets, SQL injection, XSS vulnerabilities
 - ⚡ **Performance Insights**: Identify bottlenecks and inefficient code
 - 🎨 **Style & Best Practices**: Enforce coding standards
 - 📊 **Detailed Reports**: Terminal output + Markdown reports
 - 🔗 **Git Integration**: Pre-commit and pre-push hooks
-- 🤖 **Multiple AI Providers**: Claude (Anthropic), Gemini (Google), more coming
+- 🤖 **Multiple AI Providers**: Claude (Anthropic), Gemini (Google), OpenAI (GPT), Ollama (local)
+- 🏠 **Offline Support**: Run reviews completely offline with Ollama
 - ⚙️ **Highly Configurable**: Customize thresholds, analyzers, and output
 
 ## 🚀 Quick Start
@@ -49,6 +50,15 @@ export ANTHROPIC_API_KEY="your-claude-api-key"
 **For OpenAI:**
 ```bash
 export OPENAI_API_KEY="your-openai-api-key"
+```
+
+**For Ollama (local, no API key needed):**
+```bash
+# Make sure Ollama is running
+ollama serve
+
+# Optional: change Ollama API URL (default: http://localhost:11434)
+export OLLAMA_API_URL="http://localhost:11434"
 ```
 
 2. Initialize configuration:
@@ -140,7 +150,8 @@ ai-review status
 - **model**: Model name
   - Gemini: `"gemini-2.5-flash-lite"` (free tier), `"gemini-2.5-flash"`, `"gemini-2.5-pro"`
   - Claude: `"claude-sonnet-4-5"`, `"claude-opus-4"`
-  - OpenAI: `"gpt-4"`, `"gpt-4-turbo"`
+  - OpenAI: `"gpt-4"`, `"gpt-4-turbo"`, `"gpt-4o"`
+  - Ollama: `"codellama:13b"`, `"deepseek-coder:6.7b"`, `"qwen2.5-coder:7b"`, or any model you have pulled
 - **maxTokens**: Maximum tokens for AI response
 - **temperature**: Creativity level (0.0 - 1.0)
 
@@ -272,20 +283,20 @@ npm run format
 - [x] Hook bypass mechanisms
 - [x] Cross-platform compatibility (macOS, Linux)
 
-### Phase 3: Additional Features
+### Phase 3: Additional Features ✅
 - [x] Google Gemini support
 - [x] OpenAI GPT-4 support
 - [x] GitHub Actions integration
-- [ ] Ollama local model support
+- [x] Ollama local model support
 - [ ] VS Code extension
 - [ ] Custom rule engine
 - [ ] Historical trend analysis
 
-### Phase 4: Polish
-- [ ] Comprehensive test suite
-- [ ] Performance optimizations
-- [ ] Multi-language prompt templates
-- [ ] Team configuration sharing
+### Phase 4: Polish (In Progress)
+- [x] Comprehensive test suite (retry logic, analyzers)
+- [ ] Performance optimizations (large diffs, caching)
+- [ ] Multi-language prompt templates (i18n)
+- [ ] Team configuration sharing (remote config)
 
 ## 📄 License
 
@@ -300,6 +311,30 @@ Automatically review Pull Requests with AI! See [GitHub Actions Setup Guide](doc
 1. Copy `.github/workflows/ai-review.yml` to your repo
 2. Add `GEMINI_API_KEY` secret in repo settings
 3. Create a PR and watch the magic happen! ✨
+
+## 🏠 Offline Mode with Ollama
+
+Run reviews **100% locally** with no API costs or privacy concerns! See [Ollama Setup Guide](docs/OLLAMA.md).
+
+### Quick Setup
+
+```bash
+# Install Ollama
+brew install ollama  # macOS
+# or download from ollama.com
+
+# Start server
+ollama serve
+
+# Pull a code model
+ollama pull deepseek-coder:6.7b
+
+# Configure
+echo '{"ai":{"provider":"ollama","model":"deepseek-coder:6.7b"}}' > .aireviewrc.json
+
+# Review!
+ai-review review --staged
+```
 
 ## 🤝 Contributing
 
