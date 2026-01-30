@@ -274,9 +274,9 @@ npm run format
 
 ### Phase 3: Additional Features
 - [x] Google Gemini support
-- [ ] OpenAI GPT-4 support (in progress)
+- [x] OpenAI GPT-4 support
+- [x] GitHub Actions integration
 - [ ] Ollama local model support
-- [ ] GitHub Actions integration
 - [ ] VS Code extension
 - [ ] Custom rule engine
 - [ ] Historical trend analysis
@@ -290,6 +290,16 @@ npm run format
 ## 📄 License
 
 MIT
+
+## 🚀 GitHub Actions Integration
+
+Automatically review Pull Requests with AI! See [GitHub Actions Setup Guide](docs/GITHUB_ACTIONS.md).
+
+### Quick Setup
+
+1. Copy `.github/workflows/ai-review.yml` to your repo
+2. Add `GEMINI_API_KEY` secret in repo settings
+3. Create a PR and watch the magic happen! ✨
 
 ## 🤝 Contributing
 

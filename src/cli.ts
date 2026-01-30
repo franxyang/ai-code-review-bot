@@ -11,6 +11,7 @@ import { logger } from './utils/logger.js';
 import { DiffParser } from './git/diff-parser.js';
 import { ClaudeReviewer } from './models/claude.js';
 import { GeminiReviewer } from './models/gemini.js';
+import { OpenAIReviewer } from './models/openai.js';
 import { TerminalReporter } from './reporters/terminal.js';
 import { StaticAnalyzer } from './analyzers/static.js';
 import { GitHooksManager } from './git/hooks.js';
@@ -76,6 +77,9 @@ program
             break;
           case 'gemini':
             reviewer = new GeminiReviewer(apiKey, config.ai);
+            break;
+          case 'openai':
+            reviewer = new OpenAIReviewer(apiKey, config.ai);
             break;
           default:
             logger.warn(`Provider ${config.ai.provider} not yet supported, using static analysis only`);

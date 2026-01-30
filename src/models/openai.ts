@@ -1,8 +1,9 @@
 /**
- * Google Gemini AI integration for code review
+ * OpenAI GPT integration for code review
+ * Provides AI-powered code analysis using OpenAI's GPT models
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from 'openai';
 import { AIConfig } from '../utils/config.js';
 import { ReviewContext } from '../git/diff-parser.js';
 import { logger } from '../utils/logger.js';
@@ -26,17 +27,17 @@ export interface ReviewResult {
   reviewTime: number; // milliseconds
 }
 
-export class GeminiReviewer {
-  private client: GoogleGenerativeAI;
+export class OpenAIReviewer {
+  private client: OpenAI;
   private config: AIConfig;
 
   constructor(apiKey: string, config: AIConfig) {
-    this.client = new GoogleGenerativeAI(apiKey);
+    this.client = new OpenAI({ apiKey });
     this.config = config;
   }
 
   /**
-   * Review code changes using Gemini
+   * Review code changes using OpenAI GPT
    */
   async reviewChanges(context: ReviewContext): Promise<ReviewResult> {
     const startTime = Date.now();
@@ -44,22 +45,23 @@ export class GeminiReviewer {
     try {
       const prompt = this.buildPrompt(context);
       
-      logger.debug('Sending request to Gemini...');
+      logger.debug('Sending request to OpenAI...');
       
-      const model = this.client.getGenerativeModel({ 
-        model: this.config.model,
-        generationConfig: {
-          maxOutputTokens: this.config.maxTokens,
-          temperature: this.config.temperature,
-        },
-      });
-
       // Use retry logic with timeout
-      const result = await withRetry(
+      const response = await withRetry(
         () => withTimeout(
-          model.generateContent(prompt),
+          this.client.chat.completions.create({
+            model: this.config.model,
+            max_tokens: this.config.maxTokens,
+            temperature: this.config.temperature,
+            messages: [{
+              role: 'user',
+              content: prompt,
+            }],
+            response_format: { type: 'json_object' },
+          }),
           60000, // 60 second timeout
-          'Gemini request timed out after 60 seconds'
+          'OpenAI request timed out after 60 seconds'
         ),
         {
           maxAttempts: 2,
@@ -67,24 +69,26 @@ export class GeminiReviewer {
         }
       );
 
-      const response = await result.response;
-      const text = response.text();
-
       const reviewTime = Date.now() - startTime;
       
-      const reviewResult = this.parseResponse(text);
-      reviewResult.reviewTime = reviewTime;
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error('No response content from OpenAI');
+      }
       
-      return reviewResult;
+      const result = this.parseResponse(content);
+      result.reviewTime = reviewTime;
+      
+      return result;
 
     } catch (error) {
-      logger.error('Gemini API error:', error);
+      logger.error('OpenAI API error:', error);
       throw new Error(`AI review failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
   /**
-   * Build prompt for Gemini
+   * Build prompt for OpenAI
    */
   private buildPrompt(context: ReviewContext): string {
     const { files, totalAdditions, totalDeletions, totalFiles } = context;
@@ -132,7 +136,7 @@ ${fileSummaries}
 ${diffsText}
 
 ## Review Instructions:
-Provide your review in the following JSON format (output ONLY valid JSON, no markdown code blocks):
+Provide your review in the following JSON format (output ONLY valid JSON):
 
 {
   "overallScore": <number 0-10>,
@@ -168,21 +172,11 @@ Be constructive and specific. Provide actionable feedback.`;
   }
 
   /**
-   * Parse Gemini's JSON response
+   * Parse OpenAI's JSON response
    */
   private parseResponse(responseText: string): ReviewResult {
     try {
-      // Remove markdown code blocks if present
-      let cleanedText = responseText.trim();
-      cleanedText = cleanedText.replace(/^```json\s*/i, '').replace(/\s*```$/, '');
-      
-      // Extract JSON from response (in case there's extra text)
-      const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('No JSON found in response');
-      }
-
-      const parsed = JSON.parse(jsonMatch[0]);
+      const parsed = JSON.parse(responseText);
 
       // Validate structure
       if (typeof parsed.overallScore !== 'number' || 
@@ -225,16 +219,21 @@ Be constructive and specific. Provide actionable feedback.`;
   }
 
   /**
-   * Test connection to Gemini API
+   * Test connection to OpenAI API
    */
   async testConnection(): Promise<boolean> {
     try {
-      const model = this.client.getGenerativeModel({ model: this.config.model });
-      const result = await model.generateContent('Hello');
-      await result.response;
+      await this.client.chat.completions.create({
+        model: this.config.model,
+        max_tokens: 10,
+        messages: [{
+          role: 'user',
+          content: 'Hello',
+        }],
+      });
       return true;
     } catch (error) {
-      logger.error('Gemini connection test failed:', error);
+      logger.error('OpenAI connection test failed:', error);
       return false;
     }
   }

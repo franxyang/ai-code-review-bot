@@ -6,6 +6,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { AIConfig } from '../utils/config.js';
 import { ReviewContext } from '../git/diff-parser.js';
 import { logger } from '../utils/logger.js';
+import { withRetry, withTimeout } from '../utils/retry.js';
 
 export interface ReviewIssue {
   severity: 'error' | 'warning' | 'info';
@@ -45,15 +46,26 @@ export class ClaudeReviewer {
       
       logger.debug('Sending request to Claude...');
       
-      const response = await this.client.messages.create({
-        model: this.config.model,
-        max_tokens: this.config.maxTokens,
-        temperature: this.config.temperature,
-        messages: [{
-          role: 'user',
-          content: prompt,
-        }],
-      });
+      // Use retry logic with timeout
+      const response = await withRetry(
+        () => withTimeout(
+          this.client.messages.create({
+            model: this.config.model,
+            max_tokens: this.config.maxTokens,
+            temperature: this.config.temperature,
+            messages: [{
+              role: 'user',
+              content: prompt,
+            }],
+          }),
+          60000, // 60 second timeout
+          'Claude request timed out after 60 seconds'
+        ),
+        {
+          maxAttempts: 2,
+          delayMs: 2000,
+        }
+      );
 
       const reviewTime = Date.now() - startTime;
       
