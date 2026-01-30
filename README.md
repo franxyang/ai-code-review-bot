@@ -4,12 +4,13 @@ An intelligent code review tool powered by Claude AI, designed to catch bugs, se
 
 ## ✨ Features
 
-- 🔍 **Deep Code Analysis**: AI-powered review using Claude Sonnet
+- 🔍 **Deep Code Analysis**: AI-powered review using Claude or Gemini
 - 🔐 **Security Scanning**: Detect hardcoded secrets, SQL injection, XSS vulnerabilities
 - ⚡ **Performance Insights**: Identify bottlenecks and inefficient code
 - 🎨 **Style & Best Practices**: Enforce coding standards
 - 📊 **Detailed Reports**: Terminal output + Markdown reports
-- 🔗 **Git Integration**: Pre-commit and pre-push hooks (coming soon)
+- 🔗 **Git Integration**: Pre-commit and pre-push hooks
+- 🤖 **Multiple AI Providers**: Claude (Anthropic), Gemini (Google), more coming
 - ⚙️ **Highly Configurable**: Customize thresholds, analyzers, and output
 
 ## 🚀 Quick Start
@@ -33,9 +34,21 @@ npm link
 
 ### Configuration
 
-1. Set your Anthropic API key:
+1. Set your AI provider API key:
+
+**For Gemini (default):**
 ```bash
-export ANTHROPIC_API_KEY="your-api-key-here"
+export GEMINI_API_KEY="your-gemini-api-key"
+```
+
+**For Claude:**
+```bash
+export ANTHROPIC_API_KEY="your-claude-api-key"
+```
+
+**For OpenAI:**
+```bash
+export OPENAI_API_KEY="your-openai-api-key"
 ```
 
 2. Initialize configuration:
@@ -89,8 +102,8 @@ ai-review status
     "prePush": "full"
   },
   "ai": {
-    "provider": "claude",
-    "model": "claude-sonnet-4-5",
+    "provider": "gemini",
+    "model": "gemini-2.0-flash-exp",
     "maxTokens": 4000,
     "temperature": 0.2
   },
@@ -123,8 +136,11 @@ ai-review status
 ### Configuration Options
 
 #### `ai`
-- **provider**: AI service (`"claude"` | `"openai"` | `"ollama"`)
-- **model**: Model name (e.g., `"claude-sonnet-4-5"`)
+- **provider**: AI service (`"gemini"` | `"claude"` | `"openai"` | `"ollama"`)
+- **model**: Model name
+  - Gemini: `"gemini-2.0-flash-exp"`, `"gemini-1.5-pro"`
+  - Claude: `"claude-sonnet-4-5"`, `"claude-opus-4"`
+  - OpenAI: `"gpt-4"`, `"gpt-4-turbo"`
 - **maxTokens**: Maximum tokens for AI response
 - **temperature**: Creativity level (0.0 - 1.0)
 
@@ -226,8 +242,9 @@ npm run format
 ## 🔒 Security & Privacy
 
 ### API Key Management
-- ✅ Keys read from environment variables
-- ✅ Never committed to version control
+- ✅ Keys read from environment variables only
+- ✅ Never committed to version control (`.env` in `.gitignore`)
+- ✅ Support for `.env` files via `dotenv`
 - ✅ Optional local encryption (future)
 
 ### Code Privacy
@@ -249,14 +266,15 @@ npm run format
 - [x] Terminal reporting
 - [x] Configuration system
 
-### Phase 2: Git Hooks (In Progress)
-- [ ] Pre-commit hook installation
-- [ ] Pre-push hook installation
-- [ ] Hook bypass mechanisms
-- [ ] Timeout handling
+### Phase 2: Git Hooks ✅
+- [x] Pre-commit hook installation
+- [x] Pre-push hook installation
+- [x] Hook bypass mechanisms
+- [x] Cross-platform compatibility (macOS, Linux)
 
 ### Phase 3: Additional Features
-- [ ] OpenAI GPT-4 support
+- [x] Google Gemini support
+- [ ] OpenAI GPT-4 support (in progress)
 - [ ] Ollama local model support
 - [ ] GitHub Actions integration
 - [ ] VS Code extension
@@ -280,9 +298,16 @@ Contributions welcome! Please open an issue or PR.
 ## 🐛 Troubleshooting
 
 ### "Missing API key" error
-Set `ANTHROPIC_API_KEY` environment variable:
+Set the appropriate API key for your provider:
 ```bash
+# For Gemini
+export GEMINI_API_KEY="your-key"
+
+# For Claude
 export ANTHROPIC_API_KEY="your-key"
+
+# Or add to .env file
+echo "GEMINI_API_KEY=your-key" > .env
 ```
 
 ### "No changes to review"

@@ -6,7 +6,7 @@
 import { cosmiconfig } from 'cosmiconfig';
 
 export interface AIConfig {
-  provider: 'claude' | 'openai' | 'ollama';
+  provider: 'claude' | 'openai' | 'gemini' | 'ollama';
   model: string;
   maxTokens: number;
   temperature: number;
@@ -56,8 +56,8 @@ const DEFAULT_CONFIG: ReviewConfig = {
     prePush: 'full',
   },
   ai: {
-    provider: 'claude',
-    model: 'claude-sonnet-4-5',
+    provider: 'gemini',
+    model: 'gemini-2.0-flash-exp',
     maxTokens: 4000,
     temperature: 0.2,
   },
@@ -140,6 +140,8 @@ export function getAPIKey(config: ReviewConfig): string | undefined {
       return process.env.ANTHROPIC_API_KEY;
     case 'openai':
       return process.env.OPENAI_API_KEY;
+    case 'gemini':
+      return process.env.GEMINI_API_KEY;
     case 'ollama':
       return undefined; // Ollama doesn't need API key
     default:
@@ -154,7 +156,7 @@ export function validateConfig(config: ReviewConfig): { valid: boolean; errors: 
   const errors: string[] = [];
   
   // Check AI provider
-  if (!['claude', 'openai', 'ollama'].includes(config.ai.provider)) {
+  if (!['claude', 'openai', 'gemini', 'ollama'].includes(config.ai.provider)) {
     errors.push(`Invalid AI provider: ${config.ai.provider}`);
   }
   
@@ -162,7 +164,12 @@ export function validateConfig(config: ReviewConfig): { valid: boolean; errors: 
   if (config.ai.provider !== 'ollama') {
     const apiKey = getAPIKey(config);
     if (!apiKey) {
-      errors.push(`Missing API key for ${config.ai.provider}. Set ${config.ai.provider === 'claude' ? 'ANTHROPIC_API_KEY' : 'OPENAI_API_KEY'} environment variable.`);
+      const envVarName = {
+        claude: 'ANTHROPIC_API_KEY',
+        openai: 'OPENAI_API_KEY',
+        gemini: 'GEMINI_API_KEY'
+      }[config.ai.provider] || 'API_KEY';
+      errors.push(`Missing API key for ${config.ai.provider}. Set ${envVarName} environment variable.`);
     }
   }
   

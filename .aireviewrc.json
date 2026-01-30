@@ -1,0 +1,40 @@
+{
+  "enabled": true,
+  "hooks": {
+    "preCommit": "static",
+    "prePush": "full"
+  },
+  "ai": {
+    "provider": "gemini",
+    "model": "gemini-2.0-flash-exp",
+    "maxTokens": 4000,
+    "temperature": 0.2
+  },
+  "analyzers": {
+    "static": true,
+    "security": true,
+    "performance": true,
+    "style": true
+  },
+  "ignore": [
+    "node_modules/**",
+    "dist/**",
+    "build/**",
+    "*.min.js",
+    "*.min.css",
+    ".env*",
+    "package-lock.json",
+    "yarn.lock"
+  ],
+  "thresholds": {
+    "blockPush": 5.0,
+    "warning": 7.0
+  },
+  "output": {
+    "terminal": true,
+    "markdown": true,
+    "json": false,
+    "verbose": false
+  },
+  "timeout": 300
+}

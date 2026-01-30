@@ -247,15 +247,12 @@ else
     exit 0
 fi
 
-# Run review with timeout
-timeout 60 $AI_REVIEW_CMD review --staged 2>&1
+# Run review (removed timeout for cross-platform compatibility)
+$AI_REVIEW_CMD review --staged 2>&1
 
 EXIT_CODE=$?
 
-if [ $EXIT_CODE -eq 124 ]; then
-    echo "\${YELLOW}⚠ Review timed out (60s), allowing commit\${NC}"
-    exit 0
-elif [ $EXIT_CODE -ne 0 ]; then
+if [ $EXIT_CODE -ne 0 ]; then
     echo "\${RED}✗ Review failed. Fix issues or use --no-verify to skip\${NC}"
     exit 1
 fi
@@ -292,15 +289,12 @@ else
     exit 0
 fi
 
-# Run full review with longer timeout
-timeout 300 $AI_REVIEW_CMD review --commit HEAD 2>&1
+# Run full review (removed timeout for cross-platform compatibility)
+$AI_REVIEW_CMD review --commit HEAD 2>&1
 
 EXIT_CODE=$?
 
-if [ $EXIT_CODE -eq 124 ]; then
-    echo "\${YELLOW}⚠ Review timed out (5min), allowing push\${NC}"
-    exit 0
-elif [ $EXIT_CODE -ne 0 ]; then
+if [ $EXIT_CODE -ne 0 ]; then
     echo "\${RED}✗ Review failed. Fix issues or use --no-verify to skip\${NC}"
     exit 1
 fi
